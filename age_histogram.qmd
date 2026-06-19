@@ -1,0 +1,272 @@
+---
+title: "2026 FIFA World Cup Players Age Distribution"
+author: "Anthony Gao, Antigravity"
+date: "`r Sys.Date()`"
+format: html
+---
+
+## Introduction
+
+This report analyzes the age distribution of the players participating in the 2026 FIFA World Cup, utilizing data scraped from Wikipedia.
+
+```{r setup}
+#| include: false
+#| message: false
+#| warning: false
+suppressPackageStartupMessages(library(tidyverse))
+
+# Read the players dataset
+players <- read_csv("players.csv")
+```
+
+
+
+## Age Distribution by Position
+
+Below is the age distribution comparison across different player positions represented as overlaid density curves:
+
+```{r density-position}
+#| echo: false
+#| message: false
+#| warning: false
+ggplot(players, aes(x = Age, fill = Position, color = Position)) +
+  geom_density(alpha = 0.2, linewidth = 1) +
+  scale_fill_manual(values = c("GK" = "#e63946", "DF" = "#457b9d", "MF" = "#1d3557", "FW" = "#2a9d8f")) +
+  scale_color_manual(values = c("GK" = "#e63946", "DF" = "#457b9d", "MF" = "#1d3557", "FW" = "#2a9d8f")) +
+  scale_x_continuous(breaks = seq(min(players$Age), max(players$Age), by = 2)) +
+  labs(
+    title = "Age Density Distribution by Position",
+    x = "Age",
+    y = "Density",
+    fill = "Position",
+    color = "Position"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
+```
+
+
+
+## Average Age of Squads by Team (Grouped by Continent)
+
+Below is a lollipop chart displaying the average age of the squads for each team, sorted by GDP:
+
+```{r average-age-team}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-width: 8
+#| fig-height: 12
+
+# Named vector mapping each country to its respective continent and dummy GDP data
+continent_mapping <- c(
+  "Czech Republic" = "Europe", "Mexico" = "North America", "South Africa" = "Africa",
+  "South Korea" = "Asia", "Bosnia and Herzegovina" = "Europe", "Canada" = "North America",
+  "Qatar" = "Asia", "Switzerland" = "Europe", "Brazil" = "South America",
+  "Haiti" = "North America", "Morocco" = "Africa", "Scotland" = "Europe",
+  "Australia" = "Asia", "Paraguay" = "South America", "Turkey" = "Europe",
+  "United States" = "North America", "Curaçao" = "North America", "Ecuador" = "South America",
+  "Germany" = "Europe", "Ivory Coast" = "Africa", "Japan" = "Asia",
+  "Netherlands" = "Europe", "Sweden" = "Europe", "Tunisia" = "Africa",
+  "Belgium" = "Europe", "Egypt" = "Africa", "Iran" = "Asia",
+  "New Zealand" = "Oceania", "Cape Verde" = "Africa", "Saudi Arabia" = "Asia",
+  "Spain" = "Europe", "Uruguay" = "South America", "France" = "Europe",
+  "Iraq" = "Asia", "Norway" = "Europe", "Senegal" = "Africa",
+  "Algeria" = "Africa", "Argentina" = "South America", "Austria" = "Europe",
+  "Jordan" = "Asia", "Colombia" = "South America", "DR Congo" = "Africa",
+  "Portugal" = "Europe", "Uzbekistan" = "Asia", "Croatia" = "Europe",
+  "England" = "Europe", "Ghana" = "Africa", "Panama" = "North America"
+)
+
+# GDP (nominal, USD billions, approx 2023/2024 IMF/World Bank figures)
+gdp_data <- c(
+  "United States" = 27360, "Germany" = 4457, "Japan" = 4213,
+  "France" = 3031, "England" = 3100, "Brazil" = 2174,
+  "Canada" = 2140, "Australia" = 1723, "Mexico" = 1788,
+  "South Korea" = 1712, "Spain" = 1582, "Saudi Arabia" = 1062,
+  "Netherlands" = 1118, "Turkey" = 1108, "Switzerland" = 905,
+  "Sweden" = 597, "Belgium" = 627, "Argentina" = 621,
+  "Norway" = 546, "Austria" = 527, "Iran" = 413,
+  "South Africa" = 377, "Egypt" = 395, "Colombia" = 363,
+  "Czech Republic" = 341, "Scotland" = 250, "New Zealand" = 249,
+  "Algeria" = 239, "Qatar" = 235, "Iraq" = 264,
+  "Portugal" = 287, "Morocco" = 143, "Ecuador" = 118,
+  "Uzbekistan" = 90, "Uruguay" = 78, "Panama" = 77,
+  "Ghana" = 77, "Ivory Coast" = 71, "DR Congo" = 65,
+  "Croatia" = 82, "Tunisia" = 49, "Jordan" = 50,
+  "Paraguay" = 43, "Senegal" = 27, "Bosnia and Herzegovina" = 25,
+  "Haiti" = 20, "Cape Verde" = 2, "Curaçao" = 4
+)
+
+team_data <- players %>%
+  group_by(Country) %>%
+  summarise(
+    AverageAge = mean(Age),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Continent = continent_mapping[Country],
+    GDP_bn = gdp_data[Country]
+  ) %>%
+  arrange(desc(GDP_bn)) %>%
+  mutate(Country = factor(Country, levels = rev(Country)))
+
+ggplot(team_data, aes(x = AverageAge, y = Country, color = Continent)) +
+  geom_segment(aes(x = 22, xend = AverageAge, y = Country, yend = Country), color = "grey80", linewidth = 0.5) +
+  geom_point(size = 2.5) +
+  geom_text(aes(label = sprintf("%.1f", AverageAge)), hjust = -0.4, size = 2.5, show.legend = FALSE) +
+  xlim(22, 31) +
+  scale_color_manual(values = c(
+    "Africa" = "#e63946",
+    "Asia" = "#2a9d8f",
+    "Europe" = "#1d3557",
+    "North America" = "#f4a261",
+    "South America" = "#e76f51",
+    "Oceania" = "#9b5de5"
+  )) +
+  labs(
+    title = "Average Age of Squads by Team (Ordered by GDP, Highest to Lowest)",
+    x = "Average Age (Years)",
+    y = "Team",
+    color = "Continent"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
+```
+
+## Average Age vs. Country GDP (by Continent)
+
+The scatter plot below shows the relationship between a country's nominal GDP and its squad's average age. Each point represents one national team, colored by continent. A LOESS trend line is overlaid to highlight any overall pattern.
+
+```{r age-vs-gdp-scatter}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-width: 10
+#| fig-height: 7
+
+continent_mapping <- c(
+  "Czech Republic" = "Europe", "Mexico" = "North America", "South Africa" = "Africa",
+  "South Korea" = "Asia", "Bosnia and Herzegovina" = "Europe", "Canada" = "North America",
+  "Qatar" = "Asia", "Switzerland" = "Europe", "Brazil" = "South America",
+  "Haiti" = "North America", "Morocco" = "Africa", "Scotland" = "Europe",
+  "Australia" = "Asia", "Paraguay" = "South America", "Turkey" = "Europe",
+  "United States" = "North America", "Curaçao" = "North America", "Ecuador" = "South America",
+  "Germany" = "Europe", "Ivory Coast" = "Africa", "Japan" = "Asia",
+  "Netherlands" = "Europe", "Sweden" = "Europe", "Tunisia" = "Africa",
+  "Belgium" = "Europe", "Egypt" = "Africa", "Iran" = "Asia",
+  "New Zealand" = "Oceania", "Cape Verde" = "Africa", "Saudi Arabia" = "Asia",
+  "Spain" = "Europe", "Uruguay" = "South America", "France" = "Europe",
+  "Iraq" = "Asia", "Norway" = "Europe", "Senegal" = "Africa",
+  "Algeria" = "Africa", "Argentina" = "South America", "Austria" = "Europe",
+  "Jordan" = "Asia", "Colombia" = "South America", "DR Congo" = "Africa",
+  "Portugal" = "Europe", "Uzbekistan" = "Asia", "Croatia" = "Europe",
+  "England" = "Europe", "Ghana" = "Africa", "Panama" = "North America"
+)
+
+gdp_data <- c(
+  "United States" = 27360, "Germany" = 4457, "Japan" = 4213,
+  "France" = 3031, "England" = 3100, "Brazil" = 2174,
+  "Canada" = 2140, "Australia" = 1723, "Mexico" = 1788,
+  "South Korea" = 1712, "Spain" = 1582, "Saudi Arabia" = 1062,
+  "Netherlands" = 1118, "Turkey" = 1108, "Switzerland" = 905,
+  "Sweden" = 597, "Belgium" = 627, "Argentina" = 621,
+  "Norway" = 546, "Austria" = 527, "Iran" = 413,
+  "South Africa" = 377, "Egypt" = 395, "Colombia" = 363,
+  "Czech Republic" = 341, "Scotland" = 250, "New Zealand" = 249,
+  "Algeria" = 239, "Qatar" = 235, "Iraq" = 264,
+  "Portugal" = 287, "Morocco" = 143, "Ecuador" = 118,
+  "Uzbekistan" = 90, "Uruguay" = 78, "Panama" = 77,
+  "Ghana" = 77, "Ivory Coast" = 71, "DR Congo" = 65,
+  "Croatia" = 82, "Tunisia" = 49, "Jordan" = 50,
+  "Paraguay" = 43, "Senegal" = 27, "Bosnia and Herzegovina" = 25,
+  "Haiti" = 20, "Cape Verde" = 2, "Curaçao" = 4
+)
+
+scatter_data <- players %>%
+  group_by(Country) %>%
+  summarise(AverageAge = mean(Age), .groups = "drop") %>%
+  mutate(
+    Continent = continent_mapping[Country],
+    GDP_bn    = gdp_data[Country]
+  ) %>%
+  filter(!is.na(GDP_bn), !is.na(Continent))
+
+continent_colors <- c(
+  "Africa"        = "#e63946",
+  "Asia"          = "#2a9d8f",
+  "Europe"        = "#1d3557",
+  "North America" = "#f4a261",
+  "South America" = "#e76f51",
+  "Oceania"       = "#9b5de5"
+)
+
+ggplot(scatter_data, aes(x = GDP_bn, y = AverageAge, color = Continent)) +
+  geom_smooth(
+    aes(group = 1),
+    method  = "loess",
+    formula = y ~ x,
+    se      = TRUE,
+    color   = "grey50",
+    fill    = "grey85",
+    linewidth = 0.8,
+    alpha   = 0.25
+  ) +
+  geom_point(size = 3.5, alpha = 0.9) +
+  ggrepel::geom_text_repel(
+    aes(label = Country),
+    size          = 2.8,
+    max.overlaps  = 20,
+    segment.color = "grey60",
+    segment.size  = 0.3,
+    show.legend   = FALSE
+  ) +
+  scale_x_log10(
+    breaks = c(2, 10, 50, 250, 1000, 5000, 25000),
+    labels = scales::label_comma(suffix = "B")
+  ) +
+  scale_color_manual(values = continent_colors) +
+  labs(
+    title    = "Average Squad Age vs. Country GDP",
+    subtitle = "Each point is one national team · GDP on a log scale · LOESS trend line shown",
+    x        = "Nominal GDP (USD billions, log scale)",
+    y        = "Average Squad Age (Years)",
+    color    = "Continent"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, color = "grey40", size = 10),
+    panel.grid.minor  = element_blank(),
+    legend.position   = "bottom",
+    legend.title      = element_text(face = "bold")
+  )
+```
+
+## Summary Statistics
+
+Below are the summary statistics of the players' ages:
+
+
+```{r summary}
+#| echo: false
+players %>%
+  summarise(
+    `Minimum Age` = min(Age),
+    `First Quartile` = quantile(Age, 0.25),
+    `Median Age` = median(Age),
+    `Average Age` = round(mean(Age), 2),
+    `Third Quartile` = quantile(Age, 0.75),
+    `Maximum Age` = max(Age)
+  ) %>%
+  knitr::kable(align = 'c')
+```
+
