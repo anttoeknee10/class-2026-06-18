@@ -209,16 +209,13 @@ continent_colors <- c(
   "Oceania"       = "#9b5de5"
 )
 
-ggplot(scatter_data, aes(x = GDP_bn, y = AverageAge, color = Continent)) +
+ggplot(scatter_data, aes(x = GDP_bn, y = AverageAge, color = Continent, fill = Continent)) +
   geom_smooth(
-    aes(group = 1),
-    method  = "loess",
-    formula = y ~ x,
-    se      = TRUE,
-    color   = "grey50",
-    fill    = "grey85",
-    linewidth = 0.8,
-    alpha   = 0.25
+    aes(group = Continent),
+    method    = "loess",
+    formula   = y ~ x,
+    se        = FALSE,
+    linewidth = 0.8
   ) +
   geom_point(size = 3.5, alpha = 0.9) +
   ggrepel::geom_text_repel(
@@ -234,12 +231,14 @@ ggplot(scatter_data, aes(x = GDP_bn, y = AverageAge, color = Continent)) +
     labels = scales::label_comma(suffix = "B")
   ) +
   scale_color_manual(values = continent_colors) +
+  scale_fill_manual(values = continent_colors) +
   labs(
     title    = "Average Squad Age vs. Country GDP",
-    subtitle = "Each point is one national team · GDP on a log scale · LOESS trend line shown",
+    subtitle = "Each point is one national team · GDP on a log scale · Per-continent LOESS trend lines shown",
     x        = "Nominal GDP (USD billions, log scale)",
     y        = "Average Squad Age (Years)",
-    color    = "Continent"
+    color    = "Continent",
+    fill     = "Continent"
   ) +
   theme_minimal(base_size = 13) +
   theme(
